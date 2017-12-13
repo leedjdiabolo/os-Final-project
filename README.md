@@ -4,11 +4,13 @@ Final Project of OS
 
 ----
 
-### 我是題目
+### 重點摘要
 
-g++ 編譯完 main.cpp 後，你可以透過 “./a.out” 來啟動 server，預設 server port = 8000
+請使用 “make” 指令來進行編譯，會產出 server.o
 
-要更換 server port的話，可以用 “./a.out XXX” 來設定 （XXX 指你想要的 port number）
+編譯完後，你可以透過 “./server.o” 來啟動 server，預設 server port = 8000
+
+要更換 server port的話，可以用 “./server.o XXX” 來設定 （XXX 指你想要的 port number）
 
 大家的程式進入點在 “start_while_loop_for_accept_input（）” 這個function，可以參考 pwd()（大家一起加油xD ）
 
