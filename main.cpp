@@ -11,10 +11,12 @@
 #include <sys/shm.h> // shared memory
 #include <sys/wait.h> // wait()
 #include <signal.h>
-
+#include <string.h>
 #include <cstring>
 #include <map>
 #include <vector>
+#include <security/pam_appl.h> // login
+#include <security/pam_misc.h> // login
 
 using namespace std;
 
@@ -36,6 +38,15 @@ int start_while_loop_for_accept_input(int client_sockfd);
 void pwd(int client_sockfd,vector<string> input_vector);
 void search_string(int client_sockfd,vector<string> input_vector);
 void search_file(int client_sockfd,vector<string> input_vector);
+
+// login
+struct pam_response *reply;
+int function_conversation(int num_msg, const struct pam_message **msg, struct pam_response **resp, void *appdata_ptr)
+{
+    *resp = reply;
+    return PAM_SUCCESS;
+}
+
 
 int main(int argc, char* argv[], char *envp[]){
     int sockfd;
@@ -168,6 +179,37 @@ int start_while_loop_for_accept_input(int client_sockfd){
             else if(input_vector[0] == "pwd"){
                 pwd(client_sockfd,input_vector);
             }
+
+            else if(input_vector[0] == "login"){
+                char buf[128];
+                int len;
+                string user, pass;
+                send(client_sockfd, "username: ", 10, 0);
+                len = read(client_sockfd, buf, 127);
+                for(int i=0; i<len-2; i++) user += buf[i];
+                memset(buf, 0, 128);
+                send(client_sockfd, "password: ", 10, 0);
+                len = read(client_sockfd, buf, 127);
+                for(int i=0; i<len-2; i++) pass += buf[i];
+
+                static struct pam_conv pam_conversation = { function_conversation, NULL };
+                pam_handle_t*          pamh;
+                int res = pam_start("lapsapSVC", user.c_str(), &pam_conversation, &pamh);
+                if (res == PAM_SUCCESS) {
+                    reply = (struct pam_response *)malloc(sizeof(struct pam_response));
+                    reply[0].resp = strdup(pass.c_str());
+                    reply[0].resp_retcode = 0;
+                    res = pam_authenticate(pamh, 0);
+                }
+                if (res == PAM_SUCCESS) 
+                    res = pam_acct_mgmt(pamh, 0);
+                if (res == PAM_SUCCESS) 
+                    send(client_sockfd, "Correct\n", 8, 0);
+                else 
+                    send(client_sockfd, "Wrong\n", 6, 0);
+                pam_end(pamh, res);
+            }
+
             else if(input_vector[0] == "search"){
 				if( input_vector.size() == 4 && input_vector[2] == "in" ){
 					search_string(client_sockfd,input_vector);
@@ -179,12 +221,8 @@ int start_while_loop_for_accept_input(int client_sockfd){
 					string output_string = "Invalid use of command [search].\n";
                		send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
 				}
-            }
-            else if(input_vector[0] == "XXX"){
-                // add your code here
-                // add your code here
-                // add your code here
-            }
+			}
+
             else if(input_vector[0] == "XXX"){
                 // add your code here
                 // add your code here
