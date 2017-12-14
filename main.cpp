@@ -48,6 +48,15 @@ int function_conversation(int num_msg, const struct pam_message **msg, struct pa
 }
 
 
+// login
+struct pam_response *reply;
+int function_conversation(int num_msg, const struct pam_message **msg, struct pam_response **resp, void *appdata_ptr)
+{
+    *resp = reply;
+    return PAM_SUCCESS;
+}
+
+
 int main(int argc, char* argv[], char *envp[]){
     int sockfd;
     struct sockaddr_in server_addr;  //structure for IPv4
@@ -176,6 +185,7 @@ int start_while_loop_for_accept_input(int client_sockfd){
             if(input_vector[0] == "exit"){
                 return 0;
             }
+
             else if(input_vector[0] == "pwd"){
                 pwd(client_sockfd,input_vector);
             }
