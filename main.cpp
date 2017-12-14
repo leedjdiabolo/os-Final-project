@@ -32,20 +32,14 @@ int readline(int fd,char *ptr,int maxlen);
 int all_space(string command); // return 0 if the input command is all space
 vector<string> parser(string command);
 
-int start_while_loop_for_accept_input(int client_sockfd);
+int start_while_loop_for_accept_input(int client_sockfd); 
 
 // custom_command
 void pwd(int client_sockfd,vector<string> input_vector);
+void hide_show(int client_sockfd, vector<string> input_vector,int flag);
+void compress_extract(int client_sockfd, vector<string> input_vector, int flag);
 void search_string(int client_sockfd,vector<string> input_vector);
 void search_file(int client_sockfd,vector<string> input_vector);
-
-// login
-struct pam_response *reply;
-int function_conversation(int num_msg, const struct pam_message **msg, struct pam_response **resp, void *appdata_ptr)
-{
-    *resp = reply;
-    return PAM_SUCCESS;
-}
 
 
 // login
@@ -190,35 +184,6 @@ int start_while_loop_for_accept_input(int client_sockfd){
                 pwd(client_sockfd,input_vector);
             }
 
-            else if(input_vector[0] == "login"){
-                char buf[128];
-                int len;
-                string user, pass;
-                send(client_sockfd, "username: ", 10, 0);
-                len = read(client_sockfd, buf, 127);
-                for(int i=0; i<len-2; i++) user += buf[i];
-                memset(buf, 0, 128);
-                send(client_sockfd, "password: ", 10, 0);
-                len = read(client_sockfd, buf, 127);
-                for(int i=0; i<len-2; i++) pass += buf[i];
-
-                static struct pam_conv pam_conversation = { function_conversation, NULL };
-                pam_handle_t*          pamh;
-                int res = pam_start("lapsapSVC", user.c_str(), &pam_conversation, &pamh);
-                if (res == PAM_SUCCESS) {
-                    reply = (struct pam_response *)malloc(sizeof(struct pam_response));
-                    reply[0].resp = strdup(pass.c_str());
-                    reply[0].resp_retcode = 0;
-                    res = pam_authenticate(pamh, 0);
-                }
-                if (res == PAM_SUCCESS) 
-                    res = pam_acct_mgmt(pamh, 0);
-                if (res == PAM_SUCCESS) 
-                    send(client_sockfd, "Correct\n", 8, 0);
-                else 
-                    send(client_sockfd, "Wrong\n", 6, 0);
-                pam_end(pamh, res);
-            }
 
             else if(input_vector[0] == "search"){
 				if( input_vector.size() == 4 && input_vector[2] == "in" ){
@@ -233,25 +198,42 @@ int start_while_loop_for_accept_input(int client_sockfd){
 				}
 			}
 
-            else if(input_vector[0] == "XXX"){
-                // add your code here
-                // add your code here
-                // add your code here
+            else if(input_vector[0] == "hide"){
+                if(input_vector.size()==2){
+                    hide_show(client_sockfd,input_vector,0);
+                }
+                else{
+                    string output_string = "Please use \"hide [filename]\".\n";
+                    send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+                }
             }
-            else if(input_vector[0] == "XXX"){
-                // add your code here
-                // add your code here
-                // add your code here
+            else if(input_vector[0] == "ls"){
+                pwd(client_sockfd, input_vector);
             }
-            else if(input_vector[0] == "XXX"){
-                // add your code here
-                // add your code here
-                // add your code here
+            else if(input_vector[0] == "show"){
+                if (input_vector.size() == 2){
+                    hide_show(client_sockfd, input_vector,1);
+                }
+                else{
+                    string output_string = "Please use \"show [filename]\".\n";
+                    send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+                }
             }
-            else if(input_vector[0] == "XXX"){
-                // add your code here
-                // add your code here
-                // add your code here
+            else if(input_vector[0] == "compress"){
+                if (input_vector.size() == 2)                
+                    compress_extract(client_sockfd, input_vector, 0);                
+                else{
+                    string output_string = "Please use \"compress [filename]\".\n";
+                    send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+                }
+            }
+            else if(input_vector[0] == "extract"){
+                if (input_vector.size() == 2)                
+                    compress_extract(client_sockfd, input_vector, 1);                
+                else{
+                    string output_string = "Please use \"extract [filename]\".\n";
+                    send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+                }
             }
             else{
                 string output_string = "Unknown command: [" + input_vector[0] + "].\n";
@@ -348,6 +330,68 @@ void pwd(int client_sockfd,vector<string> input_vector){
     }
     else{
         wait(NULL);
+    }
+}
+
+void hide_show(int client_sockfd,vector<string> input_vector,int flag){
+    //flag 0:hide the file  ex: hide test.html
+    //flag 1:do not hide the file  ex:show .test.html
+    int pid;
+    if ((pid = fork()) == -1)
+        cout << "Error when fork to run command" << endl;
+    // child, run command
+    else if (pid == 0){
+        char **arg = new char *[5];
+        string a = "mv";
+        arg[0] = new char[3]; strcpy(arg[0],a.c_str());
+        arg[1] = new char[input_vector[1].size()+1]; strcpy(arg[1],input_vector[1].c_str());
+        string tmp;
+        if(flag == 0)
+            tmp = "." + input_vector[1];
+        else
+            tmp = input_vector[1].substr(1,input_vector[1].size()-1);
+        arg[2] = new char[tmp.size()+1]; strcpy(arg[2],tmp.c_str());
+        arg[3] = NULL;
+        execvp(a.c_str(), arg);
+    }
+    else{
+        wait(NULL);
+        string output_string;
+        if(flag==0)
+            output_string = "Hide the file :" + input_vector[1] + "\n";
+        else
+            output_string = "Show the file :" + input_vector[1] + "\n";
+        send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+    }
+}
+
+void compress_extract(int client_sockfd,vector<string> input_vector,int flag){
+    //flag 0:compress the file
+    //flag 1:extract the file
+    int pid;
+    if((pid = fork()) == -1) 
+        cout << "Error when fork to run command" << endl;
+    // child, run command
+    else if(pid == 0){
+        char **arg = new char *[3];   
+        string a;
+        if(flag==0)
+            a = "gzip";
+        else
+            a = "gunzip";
+        arg[0] = new char[a.size()+1];strcpy(arg[0],a.c_str());
+        arg[1] = new char[input_vector[1].size()+1]; strcpy(arg[1],input_vector[1].c_str());
+        arg[2] = NULL;
+        execvp(a.c_str(), arg);
+    }
+    else{
+        wait(NULL);
+        string output_string;
+        if(flag==0)
+            output_string = "Compress the file :" + input_vector[1] + "\n";
+        else
+            output_string = "Extract the file :" + input_vector[1] + "\n";
+        send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
     }
 }
 
