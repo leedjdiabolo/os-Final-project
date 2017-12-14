@@ -398,12 +398,7 @@ void compress_extract(int client_sockfd,vector<string> input_vector,int flag){
         send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
         return;
     }
-    else if(flag == 0 && input_vector[1].substr(size-3,3)==".gz"){
-        output_string = "File " + input_vector[1] + " is already compressed.\n";
-        send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
-        return;
-    }
-    else if(flag == 1 && input_vector[1].substr(size-3,3) !=".gz"){
+    else if(flag == 1 && ( size <= 7  || input_vector[1].substr(size-7,7) !=".tar.gz")){
         output_string = "File " + input_vector[1] + " is already extracted.\n";
         send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
         return;
@@ -413,15 +408,28 @@ void compress_extract(int client_sockfd,vector<string> input_vector,int flag){
         cout << "Error when fork to run command" << endl;
     // child, run command
     else if(pid == 0){
-        char **arg = new char *[3];   
-        string a;
-        if(flag==0)
-            a = "gzip";
-        else
-            a = "gunzip";
+        char **arg = new char *[4];   
+        string a,b;
+        if(flag==0){
+            a = "tar";
+            b = "zcvf";
+        }
+        else{
+            a = "tar";
+            b = "zxvf";
+        }
         arg[0] = new char[a.size()+1];strcpy(arg[0],a.c_str());
-        arg[1] = new char[input_vector[1].size()+1]; strcpy(arg[1],input_vector[1].c_str());
-        arg[2] = NULL;
+        arg[1] = new char[b.size()+1];strcpy(arg[1],b.c_str());
+        if(flag == 0){
+            string tmp = input_vector[1] + ".tar.gz";
+            arg[2] = new char[tmp.size()+1]; strcpy(arg[2],tmp.c_str());
+            arg[3] = new char[input_vector[1].size()+1]; strcpy(arg[3],input_vector[1].c_str());
+            arg[4] = NULL;
+        }
+        else{
+            arg[2] = new char[input_vector[1].size()+1]; strcpy(arg[2],input_vector[1].c_str());
+            arg[3] = NULL;
+        }
         execvp(a.c_str(), arg);
     }
     else{
