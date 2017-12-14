@@ -336,27 +336,50 @@ void pwd(int client_sockfd,vector<string> input_vector){
 void hide_show(int client_sockfd,vector<string> input_vector,int flag){
     //flag 0:hide the file  ex: hide test.html
     //flag 1:do not hide the file  ex:show .test.html
+    string output_string; 
+    string hide_filename = "." + input_vector[1];
+    int f1 = access(input_vector[1].c_str(),F_OK);
+    int f2 = access(hide_filename.c_str(),F_OK);
+    if(f1 != 0 && f2 != 0){
+        output_string = "File "+input_vector[1]+" not exist.\n";
+        send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+        return;
+    }
+    else if((flag == 0 && f2 == 0) ||(flag ==0 && f1==0 && input_vector[1][0]=='.')){
+        output_string = "File " + input_vector[1] + " is already hidden.\n";
+        send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+        return;
+    }
+    else if(flag == 1 && f1 == 0){
+        output_string = "File " + input_vector[1] + " is already showed up.\n";
+        send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+        return;
+    }
     int pid;
-    if ((pid = fork()) == -1)
+    if ((pid = fork()) == -1) 
         cout << "Error when fork to run command" << endl;
     // child, run command
     else if (pid == 0){
         char **arg = new char *[5];
         string a = "mv";
         arg[0] = new char[3]; strcpy(arg[0],a.c_str());
-        arg[1] = new char[input_vector[1].size()+1]; strcpy(arg[1],input_vector[1].c_str());
+        arg[1] = new char[input_vector[1].size()+2]; 
         string tmp;
-        if(flag == 0)
+        if(flag == 0){
             tmp = "." + input_vector[1];
-        else
-            tmp = input_vector[1].substr(1,input_vector[1].size()-1);
+            strcpy(arg[1], input_vector[1].c_str());
+        }
+        else{
+            tmp = input_vector[1];
+            strcpy(arg[1], hide_filename.c_str());
+        }
         arg[2] = new char[tmp.size()+1]; strcpy(arg[2],tmp.c_str());
         arg[3] = NULL;
         execvp(a.c_str(), arg);
     }
     else{
         wait(NULL);
-        string output_string;
+        
         if(flag==0)
             output_string = "Hide the file :" + input_vector[1] + "\n";
         else
@@ -368,6 +391,23 @@ void hide_show(int client_sockfd,vector<string> input_vector,int flag){
 void compress_extract(int client_sockfd,vector<string> input_vector,int flag){
     //flag 0:compress the file
     //flag 1:extract the file
+    string output_string;
+    int size = input_vector[1].size();
+    if(access(input_vector[1].c_str(),F_OK) != 0){
+        output_string = "File " + input_vector[1] + " not exist.\n";
+        send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+        return;
+    }
+    else if(flag == 0 && input_vector[1].substr(size-3,3)==".gz"){
+        output_string = "File " + input_vector[1] + " is already compressed.\n";
+        send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+        return;
+    }
+    else if(flag == 1 && input_vector[1].substr(size-3,3) !=".gz"){
+        output_string = "File " + input_vector[1] + " is already extracted.\n";
+        send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+        return;
+    }
     int pid;
     if((pid = fork()) == -1) 
         cout << "Error when fork to run command" << endl;
@@ -386,7 +426,7 @@ void compress_extract(int client_sockfd,vector<string> input_vector,int flag){
     }
     else{
         wait(NULL);
-        string output_string;
+        
         if(flag==0)
             output_string = "Compress the file :" + input_vector[1] + "\n";
         else
