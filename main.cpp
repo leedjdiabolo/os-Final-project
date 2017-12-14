@@ -34,6 +34,8 @@ int start_while_loop_for_accept_input(int client_sockfd);
 
 // custom_command
 void pwd(int client_sockfd,vector<string> input_vector);
+void search_string(int client_sockfd,vector<string> input_vector);
+void search_file(int client_sockfd,vector<string> input_vector);
 
 int main(int argc, char* argv[], char *envp[]){
     int sockfd;
@@ -166,10 +168,17 @@ int start_while_loop_for_accept_input(int client_sockfd){
             else if(input_vector[0] == "pwd"){
                 pwd(client_sockfd,input_vector);
             }
-            else if(input_vector[0] == "XXX"){
-                // add your code here
-                // add your code here
-                // add your code here
+            else if(input_vector[0] == "search"){
+				if( input_vector.size() == 4 && input_vector[2] == "in" ){
+					search_string(client_sockfd,input_vector);
+				}
+				else if( input_vector.size() == 5 && input_vector[2] == "in" && input_vector[3] == "dir" ){
+					search_file(client_sockfd,input_vector);
+				}
+				else{
+					string output_string = "Invalid use of command [search].\n";
+               		send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+				}
             }
             else if(input_vector[0] == "XXX"){
                 // add your code here
@@ -292,4 +301,112 @@ void pwd(int client_sockfd,vector<string> input_vector){
     else{
         wait(NULL);
     }
+}
+
+void search_string(int client_sockfd,vector<string> input_vector){
+	
+	int pid_grep ;
+	if( (pid_grep = fork()) < 0 ){
+		cout << "Error when fork to run command search" << endl;	
+	}
+	else if( pid_grep == 0 ){
+
+		int pipefd[2];
+		pipe(pipefd);
+		int pid_cat ;
+
+		if( (pid_cat = fork()) < 0 ){
+			cout << "Error when fork to run command search" << endl;	
+		}
+		// doing cat
+		else if( pid_cat == 0 ){
+
+			// set pipe
+			close(pipefd[0]);
+			dup2(pipefd[1], 1);
+			close(pipefd[1]);
+
+			// make argv
+			char** temp_argv = new char*[3];
+			temp_argv[0] = (char*) "cat";
+			temp_argv[1] = new char[input_vector[3].size()+1];
+			temp_argv[2] = NULL;
+			strcpy(temp_argv[1], input_vector[3].c_str());
+
+			// execute
+			if( execvp( temp_argv[0], temp_argv) < 0 ){
+				perror("execvp()");
+				exit(1);
+			}
+		}
+		// doing grep
+		else{
+			// wait for cat
+			wait(NULL);
+
+			// set pipe
+			close(pipefd[1]);
+			dup2(pipefd[0],0);
+			close(pipefd[0]);
+
+			// set standard output
+			dup2(client_sockfd, STDOUT_FILENO);
+
+			// make argv
+			char** temp_argv = new char*[3];
+			temp_argv[0] = (char*) "grep";
+			temp_argv[1] = new char[input_vector[1].size()+1];
+			strcpy(temp_argv[1], input_vector[1].c_str());
+			temp_argv[2] = NULL;
+
+			// execute
+			if( execvp( temp_argv[0], temp_argv) < 0 ){
+				perror("execvp()");
+				exit(1);
+			}
+		}
+	}
+	else{
+		wait(NULL);
+	}
+}
+
+void search_file(int client_sockfd,vector<string> input_vector){
+
+	int pid;
+
+	if( (pid = fork()) < 0 ){
+		cout << "Error when fork to run command search" << endl;	
+	}
+	else if( pid == 0 ){
+		
+		// make argv
+		char** temp_argv = new char*[5];
+	
+		input_vector[3] = input_vector[1];	
+		input_vector[1] = input_vector[4];
+		input_vector[0] = "find";		
+		input_vector[2] = "-name";
+
+		for(int i = 0; i < 4; i++){
+
+        	string temp_string = input_vector[i];
+        	temp_argv[i] = new char[temp_string.size()+1];
+       		strcpy(temp_argv[i],temp_string.c_str());
+
+    	}
+   		temp_argv[4] = NULL;
+
+		// set client as stdout
+		dup2(client_sockfd,STDOUT_FILENO);
+
+		// execute
+		if( execvp( temp_argv[0], temp_argv) < 0 ){
+			perror("execvp()");
+			exit(1);
+		}
+	}
+	else{
+		wait(NULL);
+	}
 }
