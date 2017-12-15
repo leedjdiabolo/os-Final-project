@@ -220,10 +220,10 @@ int start_while_loop_for_accept_input(int client_sockfd){
                 }
             }
             else if(input_vector[0] == "compress"){
-                if (input_vector.size() == 2)                
+                if (input_vector.size() == 3)                
                     compress_extract(client_sockfd, input_vector, 0);                
                 else{
-                    string output_string = "Please use \"compress [filename]\".\n";
+                    string output_string = "Please use \"compress [filename] [archive_name]\".\n";
                     send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
                 }
             }
@@ -398,7 +398,7 @@ void compress_extract(int client_sockfd,vector<string> input_vector,int flag){
         send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
         return;
     }
-    else if(flag == 1 && ( size <= 7  || input_vector[1].substr(size-7,7) !=".tar.gz")){
+    else if(flag == 1 && ( size <= 4  || input_vector[1].substr(size-4,4) !=".zip")){
         output_string = "File " + input_vector[1] + " is already extracted.\n";
         send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
         return;
@@ -408,28 +408,31 @@ void compress_extract(int client_sockfd,vector<string> input_vector,int flag){
         cout << "Error when fork to run command" << endl;
     // child, run command
     else if(pid == 0){
-        char **arg = new char *[4];   
+        dup2(client_sockfd,1);
+        dup2(client_sockfd, 2);
+        dup2(client_sockfd, 0);
+        char **arg = new char *[5];   
         string a,b;
         if(flag==0){
-            a = "tar";
-            b = "zcvf";
+            a = "zip";
+            b = "-r";
         }
         else{
-            a = "tar";
-            b = "zxvf";
+            a = "unzip";
         }
         arg[0] = new char[a.size()+1];strcpy(arg[0],a.c_str());
-        arg[1] = new char[b.size()+1];strcpy(arg[1],b.c_str());
+        
         if(flag == 0){
-            string tmp = input_vector[1] + ".tar.gz";
-            arg[2] = new char[tmp.size()+1]; strcpy(arg[2],tmp.c_str());
+            arg[1] = new char[b.size()+1];strcpy(arg[1],b.c_str());            
+            arg[2] = new char[input_vector[2].size()+1]; strcpy(arg[2],input_vector[2].c_str());
             arg[3] = new char[input_vector[1].size()+1]; strcpy(arg[3],input_vector[1].c_str());
             arg[4] = NULL;
         }
         else{
-            arg[2] = new char[input_vector[1].size()+1]; strcpy(arg[2],input_vector[1].c_str());
-            arg[3] = NULL;
+            arg[1] = new char[input_vector[1].size()+1]; strcpy(arg[1],input_vector[1].c_str());
+            arg[2] = NULL;
         }
+       
         execvp(a.c_str(), arg);
     }
     else{
