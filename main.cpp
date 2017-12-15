@@ -35,7 +35,8 @@ vector<string> parser(string command);
 int start_while_loop_for_accept_input(int client_sockfd); 
 
 // custom_command
-void pwd(int client_sockfd,vector<string> input_vector);
+void exec_command_directly_only(int client_sockfd,vector<string> input_vector);
+int login(int client_sockfd);
 void hide_show(int client_sockfd, vector<string> input_vector,int flag);
 void compress_extract(int client_sockfd, vector<string> input_vector, int flag);
 void search_string(int client_sockfd,vector<string> input_vector);
@@ -119,8 +120,7 @@ int main(int argc, char* argv[], char *envp[]){
             
             // send start_string & "% " to client 
             send(client_sockfd, start_string.c_str(), (int)strlen(start_string.c_str()), 0);
-            send(client_sockfd, "% ", (int)strlen("% "), 0);
-
+            
             // fork()
             if( (child_pid = fork()) < 0 ){
                 cout << "ERROR when fork a child to handle a new client" << endl;
@@ -129,8 +129,16 @@ int main(int argc, char* argv[], char *envp[]){
                 // close original (parent) socket
                 close(sockfd);
                 
-                // start work
-                start_while_loop_for_accept_input(client_sockfd);
+                //login
+                if(login(client_sockfd) == 1){
+                    cout << "Client Login success" << endl;
+                    // start work
+                    send(client_sockfd, "% ", (int)strlen("% "), 0);
+                    start_while_loop_for_accept_input(client_sockfd);
+                }
+                else{
+                    cout << "Client Login failed" << endl;
+                }
 
                 //end
                 cout<<"A client disconnect with server, client ip:"<<ip<<" , client port:"<<port<<endl;
@@ -180,10 +188,9 @@ int start_while_loop_for_accept_input(int client_sockfd){
                 return 0;
             }
 
-            else if(input_vector[0] == "pwd"){
-                pwd(client_sockfd,input_vector);
+            else if(input_vector[0] == "pwd" || input_vector[0] == "ls" || input_vector[0] == "cat" || input_vector[0] == "mv" || input_vector[0] == "touch" || input_vector[0] == "rm" || input_vector[0] == "cp" ){
+                exec_command_directly_only(client_sockfd,input_vector);
             }
-
 
             else if(input_vector[0] == "search"){
 				if( input_vector.size() == 4 && input_vector[2] == "in" ){
@@ -206,9 +213,6 @@ int start_while_loop_for_accept_input(int client_sockfd){
                     string output_string = "Please use \"hide [filename]\".\n";
                     send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
                 }
-            }
-            else if(input_vector[0] == "ls"){
-                pwd(client_sockfd, input_vector);
             }
             else if(input_vector[0] == "show"){
                 if (input_vector.size() == 2){
@@ -305,7 +309,7 @@ vector<string> parser(string command){
     return result_vector;
 }
 
-void pwd(int client_sockfd,vector<string> input_vector){
+void exec_command_directly_only(int client_sockfd,vector<string> input_vector){
 
     // make argv (for argument)
     char** temp_argv = new char*[input_vector.size()+1];
@@ -325,12 +329,49 @@ void pwd(int client_sockfd,vector<string> input_vector){
     }
     // child, run command
     else if(pid == 0){
+        dup2(client_sockfd,STDERR_FILENO);
         dup2(client_sockfd,STDOUT_FILENO);
         execvp(input_vector[0].c_str(), temp_argv);
     }
     else{
         wait(NULL);
     }
+}
+
+
+int login(int client_sockfd){
+    char buf[128];
+    int len;
+    string user, pass;
+    send(client_sockfd, "username: ", 10, 0);
+    len = read(client_sockfd, buf, 127);
+    for(int i=0; i<len-2; i++) user += buf[i];
+    memset(buf, 0, 128);
+    send(client_sockfd, "password: ", 10, 0);
+    len = read(client_sockfd, buf, 127);
+    for(int i=0; i<len-2; i++) pass += buf[i];
+
+    static struct pam_conv pam_conversation = { function_conversation, NULL };
+    pam_handle_t*          pamh;
+    int res = pam_start("lapsapSVC", user.c_str(), &pam_conversation, &pamh);
+    if (res == PAM_SUCCESS) {
+        reply = (struct pam_response *)malloc(sizeof(struct pam_response));
+        reply[0].resp = strdup(pass.c_str());
+        reply[0].resp_retcode = 0;
+        res = pam_authenticate(pamh, 0);
+    }
+    if (res == PAM_SUCCESS) 
+        res = pam_acct_mgmt(pamh, 0);
+    if (res == PAM_SUCCESS) 
+        send(client_sockfd, "Correct\n", 8, 0);
+    else 
+        send(client_sockfd, "Wrong\n", 6, 0);
+    pam_end(pamh, res);
+
+    if (res == PAM_SUCCESS) 
+        return 1;
+    else
+        return 0;
 }
 
 void hide_show(int client_sockfd,vector<string> input_vector,int flag){
