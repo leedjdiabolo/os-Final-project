@@ -35,18 +35,9 @@ vector<string> parser(string command);
 int start_while_loop_for_accept_input(int client_sockfd);
 
 // custom_command
-void pwd(int client_sockfd,vector<string> input_vector);
+void exec_command_directly_only(int client_sockfd,vector<string> input_vector);
 void search_string(int client_sockfd,vector<string> input_vector);
 void search_file(int client_sockfd,vector<string> input_vector);
-
-// login
-struct pam_response *reply;
-int function_conversation(int num_msg, const struct pam_message **msg, struct pam_response **resp, void *appdata_ptr)
-{
-    *resp = reply;
-    return PAM_SUCCESS;
-}
-
 
 // login
 struct pam_response *reply;
@@ -186,10 +177,9 @@ int start_while_loop_for_accept_input(int client_sockfd){
                 return 0;
             }
 
-            else if(input_vector[0] == "pwd"){
-                pwd(client_sockfd,input_vector);
+            else if(input_vector[0] == "pwd" || input_vector[0] == "ls" || input_vector[0] == "cat" || input_vector[0] == "mv" || input_vector[0] == "touch" || input_vector[0] == "rm" || input_vector[0] == "cp" ){
+                exec_command_directly_only(client_sockfd,input_vector);
             }
-
             else if(input_vector[0] == "login"){
                 char buf[128];
                 int len;
@@ -323,7 +313,7 @@ vector<string> parser(string command){
     return result_vector;
 }
 
-void pwd(int client_sockfd,vector<string> input_vector){
+void exec_command_directly_only(int client_sockfd,vector<string> input_vector){
 
     // make argv (for argument)
     char** temp_argv = new char*[input_vector.size()+1];
@@ -339,10 +329,11 @@ void pwd(int client_sockfd,vector<string> input_vector){
     // exec pwd
     int pid;
     if((pid = fork()) == -1) {
-        cout << "Error when fork to run command" << endl;
+        cout << "Error when fork to run original command" << endl;
     }
     // child, run command
     else if(pid == 0){
+        dup2(client_sockfd,STDERR_FILENO);
         dup2(client_sockfd,STDOUT_FILENO);
         execvp(input_vector[0].c_str(), temp_argv);
     }
