@@ -24,7 +24,15 @@ Final Project of OS
 
 ### v0.2.0
 
-執行檔案
+新增內容：
+
+1）/bin 移動到 /tmp 中
+
+2）登陸後，會進入 user 的家目錄
+
+增加指令：
+
+mkdir，cd
 
 ---
 
@@ -36,7 +44,7 @@ Final Project of OS
 
 目前可用指令：
 
-1）簡單指令：cat，cp，ls，mv，pwd，rm，touch，mkdir，cd
+1）簡單指令：cat，cp，ls，mv，pwd，rm，touch
 
 2）解壓縮指令：compress，extract
 
