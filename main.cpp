@@ -23,6 +23,9 @@ using namespace std;
 #define MAX_INPUT_LENGTH 11111
 #define PERMS 0666
 
+//username
+string username = "";
+
 // adjustable value
 int server_port = 8000; //server port number
 int backlog = 30; // the maximum number to which the queue of pending connections
@@ -57,8 +60,7 @@ int main(int argc, char* argv[], char *envp[]){
     struct sockaddr_in server_addr;  //structure for IPv4
 
     // initial
-    setenv("PATH","bin:.",1);
-    chdir("user_profile/");
+    setenv("PATH","/tmp/bin:.",1);
     if(argc == 2){ server_port = atoi(argv[1]);} // set server port
 
     // ----------------------------------------
@@ -131,6 +133,8 @@ int main(int argc, char* argv[], char *envp[]){
                 
                 //login
                 if(login(client_sockfd) == 1){
+                    string home = "/home/"+username+"/";
+                    chdir(home.c_str());
                     cout << "Client Login success" << endl;
                     // start work
                     send(client_sockfd, "% ", (int)strlen("% "), 0);
@@ -236,6 +240,14 @@ int start_while_loop_for_accept_input(int client_sockfd){
                     compress_extract(client_sockfd, input_vector, 1);                
                 else{
                     string output_string = "Please use \"extract [filename]\".\n";
+                    send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+                }
+            }
+            else if(input_vector[0] == "cd"){
+                if (input_vector.size() == 2)                
+                    cout<<username<<endl;             
+                else{
+                    string output_string = "Please use \"cd [target]\".\n";
                     send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
                 }
             }
@@ -362,8 +374,10 @@ int login(int client_sockfd){
     }
     if (res == PAM_SUCCESS) 
         res = pam_acct_mgmt(pamh, 0);
-    if (res == PAM_SUCCESS) 
+    if (res == PAM_SUCCESS){
+        username = user;
         send(client_sockfd, "Correct\n", 8, 0);
+    }
     else 
         send(client_sockfd, "Wrong\n", 6, 0);
     pam_end(pamh, res);
