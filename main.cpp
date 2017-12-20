@@ -192,7 +192,7 @@ int start_while_loop_for_accept_input(int client_sockfd){
                 return 0;
             }
 
-            else if(input_vector[0] == "pwd" || input_vector[0] == "ls" || input_vector[0] == "cat" || input_vector[0] == "mv" || input_vector[0] == "touch" || input_vector[0] == "rm" || input_vector[0] == "cp" ){
+            else if(input_vector[0] == "pwd" || input_vector[0] == "ls" || input_vector[0] == "cat" || input_vector[0] == "mv" || input_vector[0] == "touch" || input_vector[0] == "rm" || input_vector[0] == "cp" || input_vector[0] == "mkdir" ){
                 exec_command_directly_only(client_sockfd,input_vector);
             }
 
