@@ -14,14 +14,17 @@ Final Project of OS
 
 大家的程式進入點在 “start_while_loop_for_accept_input（）” 這個function，可以參考 pwd,ls,cat 等指令的部分 （大家一起加油xD ）
 
-目前啟動server後，會進入 "user_profile/" 中 ( 因為 chdir("user_profile/") ),
+啟動server後，會進入 "/home/你登入的帳號的家目錄/" 中，也就是user的家目錄 ( 因為 chdir() function 的關係 ),
 
-當中的 “bin/” 是各個指令的執行檔 （等之後換多人模式時，再統一指令位置）
-
-所以可以的話，請把你的指令執行檔放到其中的 "bin/" 中。
+執行檔的文件夾 “bin/” 已經移動到 /tmp/ 中了 （要添加指令執行檔的人，記得加到 /tmp/bin/ 中喔 ）
 
 (提醒：如果有換系統，請把你的指令執行檔案重新編譯過喔)
 
+---
+
+### v0.2.0
+
+執行檔案
 
 ---
 
@@ -33,7 +36,7 @@ Final Project of OS
 
 目前可用指令：
 
-1）簡單指令：cat，cp，ls，mv，pwd，rm，touch
+1）簡單指令：cat，cp，ls，mv，pwd，rm，touch，mkdir，cd
 
 2）解壓縮指令：compress，extract
 
@@ -42,3 +45,11 @@ Final Project of OS
 4) 搜索指令：search （還未驗證）
 
 5）退出指令：exit
+
+可再強化的指令 ？
+
+1）cd 的返回指令 (../) 路徑沒有完全擋完
+
+2)hide,show 指令，或許可以加 --list 的參數，存粹顯示被隱藏的文件
+
+3）大家的指令，應該都沒有做到權限的控管（比如 ls /,根目錄會看光光）
