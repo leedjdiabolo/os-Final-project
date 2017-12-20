@@ -24,6 +24,7 @@ using namespace std;
 #define PERMS 0666
 
 //username
+int level = 0;
 string username = "";
 
 // adjustable value
@@ -136,7 +137,7 @@ int main(int argc, char* argv[], char *envp[]){
                     string home = "/home/"+username+"/";
                     chdir(home.c_str());
                     cout << "Client Login success" << endl;
-                    
+
                     // start work
                     send(client_sockfd, "% ", (int)strlen("% "), 0);
                     start_while_loop_for_accept_input(client_sockfd);
@@ -266,7 +267,20 @@ int start_while_loop_for_accept_input(int client_sockfd){
                     chdir(home.c_str());
                 }
                 else if (input_vector.size() == 2){
-                    chdir(input_vector[1].c_str());
+                    if(input_vector[1].substr(0,2) == ".."){
+                        if(level == 0){
+                            string output_string = "You aren't able go that directory\n";
+                            send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+                        }
+                        else{
+                            chdir(input_vector[1].c_str());
+                            level--;
+                        }
+                    }
+                    else{
+                        chdir(input_vector[1].c_str());
+                        level++;
+                    }
                 }
                 else{
                     string output_string = "Please use \"cd [target]\".\n";
