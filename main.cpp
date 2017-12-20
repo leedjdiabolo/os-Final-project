@@ -136,6 +136,7 @@ int main(int argc, char* argv[], char *envp[]){
                     string home = "/home/"+username+"/";
                     chdir(home.c_str());
                     cout << "Client Login success" << endl;
+                    
                     // start work
                     send(client_sockfd, "% ", (int)strlen("% "), 0);
                     start_while_loop_for_accept_input(client_sockfd);
@@ -177,8 +178,24 @@ int start_while_loop_for_accept_input(int client_sockfd){
                 send(client_sockfd, "% ", (int)strlen("% "), 0);
                 continue;
             }
+
             // make command split with one space only
             vector<string> input_vector = parser(input_string);
+
+            // detect absolute path
+            int get_it = 0;
+            for(int i=0;i<input_vector.size();i++){
+                if(input_vector[i][0] == '/'){
+                    get_it = 1;
+                    break;
+                }
+            }
+            if(get_it == 1){
+                string output_string = "We don't accept absolute path\n";
+                send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);    
+                send(client_sockfd, "% ", (int)strlen("% "), 0);
+                continue;
+            }
 
             // -------- debug use,you can comment out this part if you dont need --------
             cout<<"sockfd --> "<<client_sockfd<<": ";
@@ -244,8 +261,13 @@ int start_while_loop_for_accept_input(int client_sockfd){
                 }
             }
             else if(input_vector[0] == "cd"){
-                if (input_vector.size() == 2)                
-                    cout<<username<<endl;             
+                if(input_vector.size() == 1){
+                    string home = "/home/"+username+"/";
+                    chdir(home.c_str());
+                }
+                else if (input_vector.size() == 2){
+                    chdir(input_vector[1].c_str());
+                }
                 else{
                     string output_string = "Please use \"cd [target]\".\n";
                     send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
