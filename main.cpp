@@ -38,6 +38,7 @@ int start_while_loop_for_accept_input(int client_sockfd);
 void pwd(int client_sockfd,vector<string> input_vector);
 void hide_show(int client_sockfd, vector<string> input_vector,int flag);
 void compress_extract(int client_sockfd, vector<string> input_vector, int flag);
+void show_space(int client_sockfd,vector<string>input_vector);
 void search_string(int client_sockfd,vector<string> input_vector);
 void search_file(int client_sockfd,vector<string> input_vector);
 
@@ -232,6 +233,14 @@ int start_while_loop_for_accept_input(int client_sockfd){
                     compress_extract(client_sockfd, input_vector, 1);                
                 else{
                     string output_string = "Please use \"extract [filename]\".\n";
+                    send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+                }
+            }
+            else if (input_vector[0] == "space"){
+                if (input_vector.size() == 1)
+                    show_space(client_sockfd, input_vector);
+                else{
+                    string output_string = "Please use \"space\".\n";
                     send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
                 }
             }
@@ -443,6 +452,41 @@ void compress_extract(int client_sockfd,vector<string> input_vector,int flag){
         else
             output_string = "Extract the file :" + input_vector[1] + "\n";
         send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+    }
+}
+
+void show_space(int client_sockfd,vector<string> input_vector) 
+{
+    int pid;
+    int p[2];
+    pipe(p);
+    if((pid=fork())==-1)
+        cout << "Error when fork to run command" << endl;
+    else if(pid == 0){
+        dup2(p[1],1);
+        close(p[0]);
+        close(p[1]);
+        char **arg = new char *[3];
+        string a = "du";
+        string b = "-sh";
+        arg[0] = new char[3];strcpy(arg[0],a.c_str());
+        arg[1] = new char[4];strcpy(arg[1],b.c_str());
+        arg[2] = NULL;
+        execvp(a.c_str(), arg);
+    }
+    else{
+        wait(NULL);
+        char buf[100];
+        int n = read(p[0],buf,100);
+        close(p[0]);
+        close(p[1]);
+        char *pch;
+        pch = strtok(strdup(buf),"M");
+        char reply[100];
+        sprintf(reply,"Current use: %sMB/100MB\n",pch);
+        write(client_sockfd,reply,strlen(reply));
+        memset(buf,0,100);
+        memset(reply,0,100);
     }
 }
 
