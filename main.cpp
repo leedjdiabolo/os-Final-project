@@ -57,7 +57,7 @@ int main(int argc, char* argv[], char *envp[]){
     struct sockaddr_in server_addr;  //structure for IPv4
 
     // initial
-    setenv("PATH","bin:.",1);
+    setenv("PATH","/tmp/bin:.",1);
     chdir("user_profile/");
     if(argc == 2){ server_port = atoi(argv[1]);} // set server port
 
