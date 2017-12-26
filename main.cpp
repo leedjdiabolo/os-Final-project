@@ -17,11 +17,16 @@
 #include <vector>
 #include <security/pam_appl.h> // login
 #include <security/pam_misc.h> // login
+#include <dirent.h>
 
 using namespace std;
 
 #define MAX_INPUT_LENGTH 11111
 #define PERMS 0666
+
+//username
+int level = 0;
+string username = "";
 
 // adjustable value
 int server_port = 8000; //server port number
@@ -41,8 +46,10 @@ void hide_show(int client_sockfd, vector<string> input_vector,int flag);
 void compress_extract(int client_sockfd, vector<string> input_vector, int flag);
 void search_string(int client_sockfd,vector<string> input_vector);
 void search_file(int client_sockfd,vector<string> input_vector);
-
-
+void show_space(int client_sockfd,vector<string>input_vector);
+void listdir(const char *name, int indent);
+void recover_from_trashcan(int client_sockfd,vector<string> input_vector);
+void remove_to(int client_sockfd,vector<string> input_vector);
 // login
 struct pam_response *reply;
 int function_conversation(int num_msg, const struct pam_message **msg, struct pam_response **resp, void *appdata_ptr)
@@ -57,8 +64,7 @@ int main(int argc, char* argv[], char *envp[]){
     struct sockaddr_in server_addr;  //structure for IPv4
 
     // initial
-    setenv("PATH","bin:.",1);
-    chdir("user_profile/");
+    setenv("PATH","/tmp/bin:.",1);
     if(argc == 2){ server_port = atoi(argv[1]);} // set server port
 
     // ----------------------------------------
@@ -131,7 +137,10 @@ int main(int argc, char* argv[], char *envp[]){
                 
                 //login
                 if(login(client_sockfd) == 1){
+                    string home = "/home/"+username+"/";
+                    chdir(home.c_str());
                     cout << "Client Login success" << endl;
+
                     // start work
                     send(client_sockfd, "% ", (int)strlen("% "), 0);
                     start_while_loop_for_accept_input(client_sockfd);
@@ -173,8 +182,24 @@ int start_while_loop_for_accept_input(int client_sockfd){
                 send(client_sockfd, "% ", (int)strlen("% "), 0);
                 continue;
             }
+
             // make command split with one space only
             vector<string> input_vector = parser(input_string);
+
+            // detect absolute path
+            int get_it = 0;
+            for(int i=0;i<input_vector.size();i++){
+                if(input_vector[i][0] == '/'){
+                    get_it = 1;
+                    break;
+                }
+            }
+            if(get_it == 1){
+                string output_string = "We don't accept absolute path\n";
+                send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);    
+                send(client_sockfd, "% ", (int)strlen("% "), 0);
+                continue;
+            }
 
             // -------- debug use,you can comment out this part if you dont need --------
             cout<<"sockfd --> "<<client_sockfd<<": ";
@@ -188,8 +213,13 @@ int start_while_loop_for_accept_input(int client_sockfd){
                 return 0;
             }
 
-            else if(input_vector[0] == "pwd" || input_vector[0] == "ls" || input_vector[0] == "cat" || input_vector[0] == "mv" || input_vector[0] == "touch" || input_vector[0] == "rm" || input_vector[0] == "cp" ){
+            else if(input_vector[0] == "pwd" || input_vector[0] == "ls" || input_vector[0] == "cat" || input_vector[0] == "mv" || input_vector[0] == "touch" || input_vector[0] == "cp" || input_vector[0] == "mkdir"){
                 exec_command_directly_only(client_sockfd,input_vector);
+            }
+
+            else if(input_vector[0] == "rm")
+            {
+                remove_to(client_sockfd, input_vector);
             }
 
             else if(input_vector[0] == "search"){
@@ -238,6 +268,43 @@ int start_while_loop_for_accept_input(int client_sockfd){
                     string output_string = "Please use \"extract [filename]\".\n";
                     send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
                 }
+            }
+            else if(input_vector[0] == "cd"){
+                if(input_vector.size() == 1){
+                    string home = "/home/"+username+"/";
+                    chdir(home.c_str());
+                }
+                else if (input_vector.size() == 2){
+                    if(input_vector[1].substr(0,2) == ".."){
+                        if(level == 0){
+                            string output_string = "You aren't able go that directory\n";
+                            send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+                        }
+                        else{
+                            chdir(input_vector[1].c_str());
+                            level--;
+                        }
+                    }
+                    else{
+                        chdir(input_vector[1].c_str());
+                        level++;
+                    }
+                }
+                else{
+                    string output_string = "Please use \"cd [target]\".\n";
+                    send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+                }
+            }
+	    else if (input_vector[0] == "space"){
+                if (input_vector.size() == 1)
+                    show_space(client_sockfd, input_vector);
+                else{
+                    string output_string = "Please use \"space\".\n";
+                    send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+                }
+            }
+            else if(input_vector[0] == "recover"){
+                recover_from_trashcan(client_sockfd, input_vector);
             }
             else{
                 string output_string = "Unknown command: [" + input_vector[0] + "].\n";
@@ -362,8 +429,10 @@ int login(int client_sockfd){
     }
     if (res == PAM_SUCCESS) 
         res = pam_acct_mgmt(pamh, 0);
-    if (res == PAM_SUCCESS) 
+    if (res == PAM_SUCCESS){
+        username = user;
         send(client_sockfd, "Correct\n", 8, 0);
+    }    
     else 
         send(client_sockfd, "Wrong\n", 6, 0);
     pam_end(pamh, res);
@@ -593,4 +662,172 @@ void search_file(int client_sockfd,vector<string> input_vector){
 	else{
 		wait(NULL);
 	}
+}
+
+void show_space(int client_sockfd,vector<string> input_vector) 
+{
+    int pid;
+    int p[2];
+    pipe(p);
+    if((pid=fork())==-1)
+        cout << "Error when fork to run command" << endl;
+    else if(pid == 0){
+        dup2(p[1],1);
+        close(p[0]);
+        close(p[1]);
+        char **arg = new char *[3];
+        string a = "du";
+        string b = "-sh";
+        arg[0] = new char[3];strcpy(arg[0],a.c_str());
+        arg[1] = new char[4];strcpy(arg[1],b.c_str());
+        arg[2] = NULL;
+        execvp(a.c_str(), arg);
+    }
+    else{
+        wait(NULL);
+        char buf[100];
+        int n = read(p[0],buf,100);
+        close(p[0]);
+        close(p[1]);
+        char *pch;
+        pch = strtok(strdup(buf),"M");
+        char reply[100];
+        sprintf(reply,"Current use: %sMB/100MB\n",pch);
+        write(client_sockfd,reply,strlen(reply));
+        memset(buf,0,100);
+        memset(reply,0,100);
+    }
+}
+void remove_to(int client_sockfd,vector<string> input_vector)
+{
+    string output_string;   
+    vector<string> directory;
+    char path[1024];
+    char *exist;
+    exist = realpath(input_vector[1].c_str(), path);
+    puts(path);
+    if(exist == NULL)
+    {
+        output_string = "File "+input_vector[1]+" not exist.\n";
+        puts(output_string.c_str());
+        send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+    }
+    else
+    {
+        char *linkCopy = strdup(exist);
+        //puts(exist);
+        char * pch;
+        pch = strtok(exist,"/");
+        while (exist != NULL)
+        {
+            printf ("%s\n",exist);
+            directory.push_back(exist);
+            exist = strtok(NULL, "/");
+        }
+            if(directory[directory.size()-2] == ".Trash") {
+                int pid = 0;
+                
+                
+                
+                exec_command_directly_only(client_sockfd, input_vector);
+                
+            }
+            else{
+                string trash_path = "/home/"+username+"/.Trash/";
+                trash_path += input_vector[1];
+                string trash_info = "/home/"+username+"/.Trash/.";
+                trash_info += input_vector[1];
+                int result;
+
+                result = rename(input_vector[1].c_str(), trash_path.c_str());
+                if(result != 0)
+                    perror("Error renaming file");
+                string input;
+                FILE *fp;
+                //cout << trash_info << endl;
+                fp = fopen(trash_info.c_str(), "w");
+                if(fp == NULL){
+                    output_string = "open trash info of "+trash_info+" faill.\n";
+                    send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+                }
+                else
+                    fwrite (linkCopy , sizeof(char), strlen(linkCopy), fp);
+                fclose(fp);      
+            }
+        //cout << input_vector[1].c_str() << " is in " << directory[directory.size()-2] << endl;
+    }
+}
+
+
+void listdir(const char *name, int indent)
+{
+    DIR *dir;
+    struct dirent *entry;
+
+    if (!(dir = opendir(name)))
+        return;
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_DIR) {
+            char path[1024];
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+                continue;
+            snprintf(path, sizeof(path), "%s/%s", name, entry->d_name);
+            printf("%*s[%s]\n", indent, "", entry->d_name);
+            listdir(path, indent + 2);
+        } else {
+            printf("%*s- %s\n", indent, "", entry->d_name);
+        }
+    }
+    closedir(dir);
+}
+
+void recover_from_trashcan(int client_sockfd,vector<string> input_vector){
+    if(input_vector[1] == "-list")
+    {
+        //recover -list
+        
+        //listdir(".Trash", 0);
+        int pid;
+        if((pid = fork()) == -1) {
+            cout << "Error when fork to run ls .Trash" << endl;
+        }
+        // child, run command
+        else if(pid == 0){
+            dup2(client_sockfd,1);
+            dup2(client_sockfd, 2);
+            string trashcan_path = "/home/"+username+".Trash";
+            listdir(".Trash", 0);
+            //listdir(trashcan_path.c_str(), 0);
+            exit(0);
+        }
+        else{
+            wait(NULL);
+        }
+    }
+    else
+    {
+        string trash_file_recover_name = "/home/" + username + "/.Trash/"; 
+        trash_file_recover_name += input_vector[1];
+        string trash_file_name = "/home/" + username + "/.Trash/.";
+        trash_file_name += input_vector[1];
+        //cout << trash_file_name << endl; 
+        FILE *pFile;
+        char mystring [100];
+
+        pFile = fopen (trash_file_name.c_str() , "r");
+        if (pFile == NULL) perror ("Error opening file");
+        else {
+            if ( fgets(mystring , 100 , pFile) != NULL ){
+                //puts (mystring);
+                int result;
+                result = rename(trash_file_recover_name.c_str(), mystring);
+                if(result != 0)
+                    perror("Error renaming file");       
+                if(remove(trash_file_name.c_str()) != 0)
+                    perror( "Error deleting file" );        
+                fclose (pFile);
+            }
+        }
+    }
 }
