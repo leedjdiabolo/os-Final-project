@@ -725,12 +725,15 @@ void remove_to(int client_sockfd,vector<string> input_vector)
             exist = strtok(NULL, "/");
         }
             if(directory[directory.size()-2] == ".Trash") {
-                int pid = 0;
-                
-                
-                
+                //delete file
                 exec_command_directly_only(client_sockfd, input_vector);
-                
+                //delete .file
+                vector<string> duplicated_input_vector;
+                for(int i=0;i<input_vector.size();i++){
+                    duplicated_input_vector.push_back(input_vector[i]);
+                }
+                duplicated_input_vector[1] = "." + input_vector[1];
+                exec_command_directly_only(client_sockfd, duplicated_input_vector);
             }
             else{
                 string trash_path = "/home/"+username+"/.Trash/";
@@ -796,7 +799,9 @@ void recover_from_trashcan(int client_sockfd,vector<string> input_vector){
         else if(pid == 0){
             dup2(client_sockfd,1);
             dup2(client_sockfd, 2);
-            string trashcan_path = "/home/"+username+".Trash";
+            //string trashcan_path = "/home/"+username+".Trash";
+            string home = "/home/"+username+"/";
+            chdir(home.c_str());
             listdir(".Trash", 0);
             //listdir(trashcan_path.c_str(), 0);
             exit(0);
