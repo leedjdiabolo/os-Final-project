@@ -170,8 +170,12 @@ int start_while_loop_for_accept_input(int client_sockfd){
         }
         else{
             // input turn to string
-            string input_string(input_buffer);
-            input_string = input_string.substr(0,input_string.size()-2);
+            //string input_string(input_buffer);
+            string input_string = "";
+            for(int i=0; i<MAX_INPUT_LENGTH; i++)
+                if( input_buffer[i] >= 32 && input_buffer[i] <= 126 )
+                    input_string += input_buffer[i];
+            input_string = input_string.substr(0,input_string.size());
             
             // if input nothing or space only
             if(all_space(input_string)){
@@ -400,11 +404,15 @@ int login(int client_sockfd){
     string user, pass;
     send(client_sockfd, "username: ", 10, 0);
     len = read(client_sockfd, buf, 127);
-    for(int i=0; i<len-2; i++) user += buf[i];
+    for(int i=0; i<len; i++)
+        if( buf[i] >= 32 && buf[i] <= 126 )
+            user += buf[i];
     memset(buf, 0, 128);
     send(client_sockfd, "password: ", 10, 0);
     len = read(client_sockfd, buf, 127);
-    for(int i=0; i<len-2; i++) pass += buf[i];
+    for(int i=0; i<len; i++) 
+        if( buf[i] >= 32 && buf[i] <= 126 )
+            pass += buf[i];
 
     static struct pam_conv pam_conversation = { function_conversation, NULL };
     pam_handle_t*          pamh;
@@ -419,10 +427,10 @@ int login(int client_sockfd){
         res = pam_acct_mgmt(pamh, 0);
     if (res == PAM_SUCCESS){
         username = user;
-        send(client_sockfd, "Correct\n", 8, 0);
+        send(client_sockfd, "Access Granted !!\n", 18, 0);
     }
     else 
-        send(client_sockfd, "Wrong\n", 6, 0);
+        send(client_sockfd, "Incorrect Password\n", 19, 0);
     pam_end(pamh, res);
 
     if (res == PAM_SUCCESS) 
