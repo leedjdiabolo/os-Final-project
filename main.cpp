@@ -347,13 +347,22 @@ vector<string> parser(string command){
     vector<string> result_vector;
     command+=" ";
 
-    // parse all parameter (split by space)
+    // parse all parameter
+    int quotation_mark = 0;
     for(int i=0;i<command.size();i++){
-        
+
         string temp_string;
         if(command[i] != ' '){
             while(1){
-                if(command[i] != ' '){
+                if(command[i] == '\"' && quotation_mark == 0){
+                    quotation_mark = 1;
+                    i++;
+                }
+                else if(command[i] == '\"' && quotation_mark == 1){
+                    quotation_mark = 0;
+                    break;
+                }
+                else if(command[i] != ' ' || quotation_mark == 1){
                     temp_string = temp_string + command[i];
                     i++;
                 }
