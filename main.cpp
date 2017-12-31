@@ -46,6 +46,8 @@ void compress_extract(int client_sockfd, vector<string> input_vector, int flag);
 void search_string(int client_sockfd,vector<string> input_vector);
 void search_file(int client_sockfd,vector<string> input_vector);
 void show_space(int client_sockfd,vector<string>input_vector);
+void echo(int client_sockfd,vector<string>input_vector);
+
 // login
 struct pam_response *reply;
 int function_conversation(int num_msg, const struct pam_message **msg, struct pam_response **resp, void *appdata_ptr)
@@ -290,11 +292,20 @@ int start_while_loop_for_accept_input(int client_sockfd){
                     send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
                 }
             }
-	    else if (input_vector[0] == "space"){
+            else if (input_vector[0] == "space"){
                 if (input_vector.size() == 1)
                     show_space(client_sockfd, input_vector);
                 else{
                     string output_string = "Please use \"space\".\n";
+                    send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+                }
+            }
+            else if(input_vector[0] == "echo"){
+                if (input_vector.size() == 2 || (input_vector.size() == 4 && (input_vector[2] == ">" || input_vector[2] == ">>"))){
+                    echo(client_sockfd,input_vector);
+                }
+                else{
+                    string output_string = "Wrong Argument, please try again\n";
                     send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
                 }
             }
@@ -701,5 +712,27 @@ void show_space(int client_sockfd,vector<string> input_vector)
         write(client_sockfd,reply,strlen(reply));
         memset(buf,0,100);
         memset(reply,0,100);
+    }
+}
+
+void echo(int client_sockfd,vector<string> input_vector){
+    if(input_vector.size() == 2){
+        string output_string = input_vector[1] + "\n";
+        send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+    }
+    else if(input_vector.size() == 4 && input_vector[2] == ">"){
+        fstream fp;
+        fp.open(input_vector[3].c_str(), ios::out);
+
+        fp<<input_vector[1]<<endl;
+        fp.close();
+    }
+
+    else if(input_vector.size() == 4 && input_vector[2] == ">>"){
+        fstream fp;
+        fp.open(input_vector[3].c_str(), fstream::app);
+
+        fp<<input_vector[1]<<endl;
+        fp.close();
     }
 }
