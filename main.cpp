@@ -101,9 +101,9 @@ int main(int argc, char* argv[], char *envp[]){
     socklen_t client_length;
     struct sockaddr_in client_addr;
 
-    cout<<"=============="<<endl;
-    cout<<" Server Ready "<<endl;
-    cout<<"=============="<<endl;
+    cout<<"====================="<<endl;
+    cout<<" Server Ready ("<<server_port<<") "<<endl;
+    cout<<"====================="<<endl;
 
     while(1){
         client_length = sizeof(client_addr);
