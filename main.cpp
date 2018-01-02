@@ -47,6 +47,9 @@ void compress_extract(int client_sockfd, vector<string> input_vector, int flag);
 void search_string(int client_sockfd,vector<string> input_vector);
 void search_file(int client_sockfd,vector<string> input_vector);
 void show_space(int client_sockfd,vector<string>input_vector);
+void echo(int client_sockfd,vector<string>input_vector);
+
+
 void listdir(const char *name, int indent);
 void recover_from_trashcan(int client_sockfd,vector<string> input_vector);
 void remove_file(int client_sockfd,vector<string> input_vector);
@@ -108,9 +111,9 @@ int main(int argc, char* argv[], char *envp[]){
     socklen_t client_length;
     struct sockaddr_in client_addr;
 
-    cout<<"=============="<<endl;
-    cout<<" Server Ready "<<endl;
-    cout<<"=============="<<endl;
+    cout<<"====================="<<endl;
+    cout<<" Server Ready ("<<server_port<<") "<<endl;
+    cout<<"====================="<<endl;
 
     while(1){
         client_length = sizeof(client_addr);
@@ -177,9 +180,13 @@ int start_while_loop_for_accept_input(int client_sockfd){
         }
         else{
             // input turn to string
-            string input_string(input_buffer);
-            input_string = input_string.substr(0,input_string.size()-2);
-            
+            //string input_string(input_buffer);
+            string input_string = "";
+            for(int i=0; i<MAX_INPUT_LENGTH; i++)
+                if( input_buffer[i] >= 32 && input_buffer[i] <= 126 )
+                    input_string += input_buffer[i];
+            input_string = input_string.substr(0,input_string.size());
+                 
             // if input nothing or space only
             if(all_space(input_string)){
                 send(client_sockfd, "% ", (int)strlen("% "), 0);
@@ -312,8 +319,37 @@ int start_while_loop_for_accept_input(int client_sockfd){
                     send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
                 }
             }
+
+            else if(input_vector[0] == "echo") {
+                if (input_vector.size() == 2 || (input_vector.size() == 4 && (input_vector[2] == ">" || input_vector[2] == ">>"))){
+                    echo(client_sockfd,input_vector);
+                }
+                else{
+                    string output_string = "Wrong Argument, please try again\n";
+                    send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+                }
+            }
+            else if (input_vector[0]=="help")
+            {
+                string output_string = "   cat      - display the contents of a file\r\n";
+                output_string += "   cd       - change directory\r\n";
+                output_string += "   compress - compress a file or folder\r\n";
+                output_string += "   cp       - copy a file or folder\r\n";
+                output_string += "   extract  - extract a compressed file or folder\r\n";
+                output_string += "   hide     - hide a file or folder\r\n";
+                output_string += "   ls       - list all the file in current folder\r\n";
+                output_string += "   mkdir    - create a new directory \r\n";
+                output_string += "   mv       - move a file or folder\r\n";
+                output_string += "   rm       - remove a file or folder\r\n";
+                output_string += "   search   - search a file in directory tree\r\n";
+                output_string += "   show     - unhide a file or folder\r\n";
+                output_string += "   space    - check the user's space volume\r\n";
+                output_string += "   touch    - create a new file\r\n";
+                send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+            }
             else if(input_vector[0] == "recover"){
                 recover_from_trashcan(client_sockfd, input_vector);
+
             }
             else{
                 string output_string = "Unknown command: [" + input_vector[0] + "].\n";
@@ -364,13 +400,22 @@ vector<string> parser(string command){
     vector<string> result_vector;
     command+=" ";
 
-    // parse all parameter (split by space)
-    for(int i=0;i<command.size();i++){
-        
+    // parse all parameter
+    int quotation_mark = 0;
+    for(int i=0;i<command.size();i++){ 
+
         string temp_string;
         if(command[i] != ' '){
             while(1){
-                if(command[i] != ' '){
+                if(command[i] == '\"' && quotation_mark == 0){
+                    quotation_mark = 1;
+                    i++;
+                }
+                else if(command[i] == '\"' && quotation_mark == 1){
+                    quotation_mark = 0;
+                    break;
+                }
+                else if(command[i] != ' ' || quotation_mark == 1){
                     temp_string = temp_string + command[i];
                     i++;
                 }
@@ -421,11 +466,15 @@ int login(int client_sockfd){
     string user, pass;
     send(client_sockfd, "username: ", 10, 0);
     len = read(client_sockfd, buf, 127);
-    for(int i=0; i<len-2; i++) user += buf[i];
+    for(int i=0; i<len; i++)
+        if( buf[i] >= 32 && buf[i] <= 126 )
+            user += buf[i];
     memset(buf, 0, 128);
     send(client_sockfd, "password: ", 10, 0);
     len = read(client_sockfd, buf, 127);
-    for(int i=0; i<len-2; i++) pass += buf[i];
+    for(int i=0; i<len; i++) 
+        if( buf[i] >= 32 && buf[i] <= 126 )
+            pass += buf[i];
 
     static struct pam_conv pam_conversation = { function_conversation, NULL };
     pam_handle_t*          pamh;
@@ -440,10 +489,10 @@ int login(int client_sockfd){
         res = pam_acct_mgmt(pamh, 0);
     if (res == PAM_SUCCESS){
         username = user;
-        send(client_sockfd, "Correct\n", 8, 0);
-    }    
+        send(client_sockfd, "Access Granted !!\n", 18, 0);
+    }   
     else 
-        send(client_sockfd, "Wrong\n", 6, 0);
+        send(client_sockfd, "Incorrect Password\n", 19, 0);
     pam_end(pamh, res);
 
     if (res == PAM_SUCCESS) 
@@ -707,6 +756,29 @@ void show_space(int client_sockfd,vector<string> input_vector)
         memset(reply,0,100);
     }
 }
+
+void echo(int client_sockfd,vector<string> input_vector){
+    if(input_vector.size() == 2){
+        string output_string = input_vector[1] + "\n";
+        send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+    }
+    else if(input_vector.size() == 4 && input_vector[2] == ">"){
+        fstream fp;
+        fp.open(input_vector[3].c_str(), ios::out);
+
+        fp<<input_vector[1]<<endl;
+        fp.close();
+    }
+
+    else if(input_vector.size() == 4 && input_vector[2] == ">>"){
+        fstream fp;
+        fp.open(input_vector[3].c_str(), fstream::app);
+
+        fp<<input_vector[1]<<endl;
+        fp.close();
+    }
+}
+
 void remove_file(int client_sockfd,vector<string> input_vector)
 {
     string output_string;   
