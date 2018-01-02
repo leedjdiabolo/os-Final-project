@@ -490,6 +490,13 @@ int login(int client_sockfd){
     if (res == PAM_SUCCESS){
         username = user;
         send(client_sockfd, "Access Granted !!\n", 18, 0);
+        string tmp = "/home/" + username + "/.Trash";
+        //string tmp = ".Trash";
+        int dir_err = mkdir(tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+        if(dir_err == -1)
+            puts(".Trash is exist");
+        else
+            puts("Created .Trash");
     }   
     else 
         send(client_sockfd, "Incorrect Password\n", 19, 0);
@@ -853,7 +860,7 @@ void remove_directory(int client_sockfd,vector<string> input_vector)
     puts(path);
     if(exist == NULL)
     {
-        output_string = "File "+input_vector[1]+" not exist.\n";
+        output_string = "File "+input_vector[1]+"is not exist.\n";
         puts(output_string.c_str());
         send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
     }
@@ -884,26 +891,9 @@ void remove_directory(int client_sockfd,vector<string> input_vector)
                 exec_command_directly_only(client_sockfd, duplicated_input_vector);
             }
             else{
-                string trash_path = "/home/"+username+"/.Trash/";
-                trash_path += input_vector[1];
-                string trash_info = "/home/"+username+"/.Trash/.";
-                trash_info += input_vector[1];
-                int result;
-
-                result = rename(input_vector[1].c_str(), trash_path.c_str());
-                if(result != 0)
-                    perror("Error renaming file");
-                string input;
-                FILE *fp;
-                //cout << trash_info << endl;
-                fp = fopen(trash_info.c_str(), "w");
-                if(fp == NULL){
-                    output_string = "open trash info of "+trash_info+" faill.\n";
-                    send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
-                }
-                else
-                    fwrite (linkCopy , sizeof(char), strlen(linkCopy), fp);
-                fclose(fp);      
+                output_string = "[rmdir] only can be used in the trash can to delete all directory.\n";
+                puts(output_string.c_str());
+                send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);   
             }
         //cout << input_vector[1].c_str() << " is in " << directory[directory.size()-2] << endl;
     }
