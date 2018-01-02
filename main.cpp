@@ -295,7 +295,7 @@ int start_while_loop_for_accept_input(int client_sockfd){
                     send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
                 }
             }
-	    else if (input_vector[0] == "space"){
+	        else if (input_vector[0] == "space"){
                 if (input_vector.size() == 1)
                     show_space(client_sockfd, input_vector);
                 else{
@@ -814,6 +814,13 @@ void recover_from_trashcan(int client_sockfd,vector<string> input_vector){
     {
         string trash_file_recover_name = "/home/" + username + "/.Trash/"; 
         trash_file_recover_name += input_vector[1];
+        if(access(trash_file_recover_name.c_str(), F_OK) == -1) {
+            char output_buf[300];
+            memset(output_buf, 0, strlen(output_buf));
+            sprintf(output_buf, "File %s is not exist in the trash can.\n", input_vector[1].c_str());
+            write(client_sockfd, output_buf, strlen(output_buf));
+            return;
+        }
         string trash_file_name = "/home/" + username + "/.Trash/.";
         trash_file_name += input_vector[1];
         //cout << trash_file_name << endl; 
