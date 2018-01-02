@@ -47,14 +47,11 @@ void compress_extract(int client_sockfd, vector<string> input_vector, int flag);
 void search_string(int client_sockfd,vector<string> input_vector);
 void search_file(int client_sockfd,vector<string> input_vector);
 void show_space(int client_sockfd,vector<string>input_vector);
-<<<<<<< HEAD
 void echo(int client_sockfd,vector<string>input_vector);
 
-=======
 void listdir(const char *name, int indent);
 void recover_from_trashcan(int client_sockfd,vector<string> input_vector);
 void remove_to(int client_sockfd,vector<string> input_vector);
->>>>>>> origin/anny
 // login
 struct pam_response *reply;
 int function_conversation(int num_msg, const struct pam_message **msg, struct pam_response **resp, void *appdata_ptr)
@@ -222,11 +219,7 @@ int start_while_loop_for_accept_input(int client_sockfd){
                 return 0;
             }
 
-<<<<<<< HEAD
-            else if(input_vector[0] == "pwd" || input_vector[0] == "ls" || input_vector[0] == "cat" || input_vector[0] == "mv" || input_vector[0] == "touch" || input_vector[0] == "rm" || input_vector[0] == "cp" || input_vector[0] == "mkdir" ){
-=======
             else if(input_vector[0] == "pwd" || input_vector[0] == "ls" || input_vector[0] == "cat" || input_vector[0] == "mv" || input_vector[0] == "touch" || input_vector[0] == "cp" || input_vector[0] == "mkdir"){
->>>>>>> origin/anny
                 exec_command_directly_only(client_sockfd,input_vector);
             }
 
@@ -308,11 +301,7 @@ int start_while_loop_for_accept_input(int client_sockfd){
                     send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
                 }
             }
-<<<<<<< HEAD
-            else if (input_vector[0] == "space"){
-=======
 	        else if (input_vector[0] == "space"){
->>>>>>> origin/anny
                 if (input_vector.size() == 1)
                     show_space(client_sockfd, input_vector);
                 else{
@@ -320,7 +309,6 @@ int start_while_loop_for_accept_input(int client_sockfd){
                     send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
                 }
             }
-<<<<<<< HEAD
             else if(input_vector[0] == "echo"){
                 if (input_vector.size() == 2 || (input_vector.size() == 4 && (input_vector[2] == ">" || input_vector[2] == ">>"))){
                     echo(client_sockfd,input_vector);
@@ -332,28 +320,31 @@ int start_while_loop_for_accept_input(int client_sockfd){
             }
             else if (input_vector[0]=="help")
             {
-                string output_string = "   cat      - display the contents of a file\r\n";
-                output_string += "   cd       - change directory\r\n";
-                output_string += "   compress - compress a file or folder\r\n";
-                output_string += "   cp       - copy a file or folder\r\n";
-                output_string += "   extract  - extract a compressed file or folder\r\n";
-                output_string += "   hide     - hide a file or folder\r\n";
-                output_string += "   ls       - list all the file in current folder\r\n";
-                output_string += "   mkdir    - create a new directory \r\n";
-                output_string += "   mv       - move a file or folder\r\n";
-                output_string += "   rm       - remove a file or folder\r\n";
-                output_string += "   search   - search a file in directory tree\r\n";
-                output_string += "   show     - unhide a file or folder\r\n";
-                output_string += "   space    - check the user's space volume\r\n";
-                output_string += "   touch    - create a new file\r\n";
+                string output_string = "   1.pwd       - show path\r\n";
+                output_string += "   2.cat       - display the contents of a file\r\n";
+                output_string += "   3.ls        - list all the file in current folder\r\n";
+                output_string += "   4.cd        - change directory\r\n";
+                output_string += "   5.cp        - copy a file or folder\r\n";
+                output_string += "   6.mv        - move a file or folder\r\n";
+                output_string += "   7.touch     - create a new file\r\n";
+                output_string += "   8.mkdir     - create a new directory \r\n";
+                output_string += "   9.search    - search a file in directory tree\r\n";
+                output_string += "   10.space    - check the user's space volume\r\n";
+                output_string += "   11.rm       - remove a file or folder\r\n";
+                output_string += "   12.recover  - recover a file or folder that has removed\r\n";
+                output_string += "   13.compress - compress a file or folder\r\n";
+                output_string += "   14.extract  - extract a compressed file or folder\r\n";
+                output_string += "   15.hide     - hide a file or folder\r\n";
+                output_string += "   16.show     - unhide a file or folder\r\n";
+                output_string += "   17.echo     - print string that you input\r\n";
+                output_string += "   18.exit     - log out\r\n";
                 send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
-=======
+            }
             else if(input_vector[0] == "recover"){
                 recover_from_trashcan(client_sockfd, input_vector);
->>>>>>> origin/anny
             }
             else{
-                string output_string = "Unknown command: [" + input_vector[0] + "].\n";
+                string output_string = "Unknown command: [" + input_vector[0] + "], Please type \"help\" to get more information.\n";
                 send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
             }
         }
@@ -490,13 +481,8 @@ int login(int client_sockfd){
         res = pam_acct_mgmt(pamh, 0);
     if (res == PAM_SUCCESS){
         username = user;
-<<<<<<< HEAD
         send(client_sockfd, "Access Granted !!\n", 18, 0);
     }
-=======
-        send(client_sockfd, "Correct\n", 8, 0);
-    }    
->>>>>>> origin/anny
     else 
         send(client_sockfd, "Incorrect Password\n", 19, 0);
     pam_end(pamh, res);
@@ -762,7 +748,6 @@ void show_space(int client_sockfd,vector<string> input_vector)
         memset(reply,0,100);
     }
 }
-<<<<<<< HEAD
 
 void echo(int client_sockfd,vector<string> input_vector){
     if(input_vector.size() == 2){
@@ -785,7 +770,6 @@ void echo(int client_sockfd,vector<string> input_vector){
         fp.close();
     }
 }
-=======
 void remove_to(int client_sockfd,vector<string> input_vector)
 {
     string output_string;   
@@ -931,4 +915,3 @@ void recover_from_trashcan(int client_sockfd,vector<string> input_vector){
         }
     }
 }
->>>>>>> origin/anny

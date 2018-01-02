@@ -22,6 +22,14 @@ Final Project of OS
 
 ---
 
+### v0.3.1
+
+更新 merge 出問題的情況：
+
+調整 help 跟 unknown command 的顯示
+
+---
+
 ### v0.3.0
 
 目前可用指令：
