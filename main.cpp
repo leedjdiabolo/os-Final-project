@@ -309,6 +309,24 @@ int start_while_loop_for_accept_input(int client_sockfd){
                     send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
                 }
             }
+            else if (input_vector[0]=="help")
+            {
+                string output_string = "  cat      - display the contents of a file\r\n";
+                output_string += "  cd       - change directory\r\n";
+                output_string += "  compress - compress a file or folder\r\n";
+                output_string += "  cp       - copy a file or folder\r\n";
+                output_string += "  extract  - extract a compressed file or folder\r\n";
+                output_string += "  hide     - hide a file or folder\r\n";
+                output_string += "  ls       - list all the file in current folder\r\n";
+                output_string += "  mkdir    - create a new directory \r\n";
+                output_string += "  mv       - move a file or folder\r\n";
+                output_string += "  rm       - remove a file or folder\r\n";
+                output_string += "  search   - search a file in directory tree\r\n";
+                output_string += "  show     - unhide a file or folder\r\n";
+                output_string += "  space    - check the user's space volume\r\n";
+                output_string += "  touch    - create a new file\r\n";
+                send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+            }
             else{
                 string output_string = "Unknown command: [" + input_vector[0] + "].\n";
                 send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
