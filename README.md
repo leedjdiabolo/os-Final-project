@@ -22,6 +22,32 @@ Final Project of OS
 
 ---
 
+### v0.3.0
+
+目前可用指令：
+
+1）簡單指令：pwd, ls, cat, mv, touch, cp mkdir
+
+2) 刪除，恢復指令：rm, recover （待強化）
+
+3）解壓縮指令：compress，extract
+
+4）顯示隱藏指令：hide，show
+
+5) 搜索指令：search
+
+6) 移動指令: cd (可加強)
+
+7）空間查詢指令： space
+
+8）列印指令： echo
+
+9）功能查詢指令： help
+
+10）退出指令：exit
+
+---
+
 ### v0.2.0
 
 新增內容：
