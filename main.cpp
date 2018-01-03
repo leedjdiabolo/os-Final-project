@@ -742,7 +742,15 @@ void show_space(int client_sockfd,vector<string> input_vector)
         char *pch;
         pch = strtok(strdup(buf),"M");
         char reply[100];
-        sprintf(reply,"Current use: %sMB/100MB\n",pch);
+	char tmp[20];
+
+	if(strstr(pch,"K")==NULL)
+            sprintf(reply,"Current use: %sMB/100MB\n",pch);
+	else{
+	    pch = NULL;
+	    pch = strtok(strdup(buf),"K");
+	    sprintf(reply,"Current use: %sKB/100MB\n",pch);
+	}
         write(client_sockfd,reply,strlen(reply));
         memset(buf,0,100);
         memset(reply,0,100);
