@@ -22,6 +22,40 @@ Final Project of OS
 
 ---
 
+### v1.0.0
+
+完整版本
+
+cgi 與 httpserver 兩個文件夾是CGI ，也就是 API 的程式部分
+
+os-project-html 是 GUI，也就是網頁的程式部分
+
+目前可用指令：
+
+1）簡單指令：pwd, ls, cat, mv, touch, cp, mkdir
+
+2) 刪除，恢復指令：rm, recover
+
+3）解壓縮指令：compress，extract
+
+4）顯示隱藏指令：hide，show
+
+5) 搜索指令：search
+
+6) 移動指令: cd (可加強)
+
+7）空間查詢指令： space
+
+8）列印指令： echo
+
+9）功能查詢指令： help
+
+10）退出指令：exit
+
+投影片網址：https://drive.google.com/open?id=1RIvuOKf9eUzM3DNupOSxAsM4CTZC0sIIqalIkraXmUs
+
+---
+
 ### v0.3.1
 
 更新 merge 出問題的情況：
@@ -36,7 +70,7 @@ Final Project of OS
 
 1）簡單指令：pwd, ls, cat, mv, touch, cp mkdir
 
-2) 刪除，恢復指令：rm, recover （待強化）
+2) 刪除，恢復指令：rm, recover
 
 3）解壓縮指令：compress，extract
 
