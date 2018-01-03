@@ -51,7 +51,10 @@ void echo(int client_sockfd,vector<string>input_vector);
 
 void listdir(const char *name, int indent);
 void recover_from_trashcan(int client_sockfd,vector<string> input_vector);
-void remove_to(int client_sockfd,vector<string> input_vector);
+void remove_file(int client_sockfd,vector<string> input_vector);
+void remove_directory(int client_sockfd,vector<string> input_vector);
+int remove_directory_in_Trash(const char *path);
+
 // login
 struct pam_response *reply;
 int function_conversation(int num_msg, const struct pam_message **msg, struct pam_response **resp, void *appdata_ptr)
@@ -225,8 +228,14 @@ int start_while_loop_for_accept_input(int client_sockfd){
 
             else if(input_vector[0] == "rm")
             {
-                remove_to(client_sockfd, input_vector);
+                remove_file(client_sockfd, input_vector);
             }
+
+            else if(input_vector[0] == "rmdir")
+            {
+                remove_directory(client_sockfd, input_vector);
+            }
+
 
             else if(input_vector[0] == "search"){
 				if( input_vector.size() == 4 && input_vector[2] == "in" ){
@@ -342,6 +351,7 @@ int start_while_loop_for_accept_input(int client_sockfd){
             }
             else if(input_vector[0] == "recover"){
                 recover_from_trashcan(client_sockfd, input_vector);
+
             }
             else{
                 string output_string = "Unknown command: [" + input_vector[0] + "], Please type \"help\" to get more information.\n";
@@ -482,7 +492,14 @@ int login(int client_sockfd){
     if (res == PAM_SUCCESS){
         username = user;
         send(client_sockfd, "Access Granted !!\n", 18, 0);
-    }
+        string tmp = "/home/" + username + "/.Trash";
+        //string tmp = ".Trash";
+        int dir_err = mkdir(tmp.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+        if(dir_err == -1)
+            puts(".Trash is exist");
+        else
+            puts("Created .Trash");
+    }   
     else 
         send(client_sockfd, "Incorrect Password\n", 19, 0);
     pam_end(pamh, res);
@@ -778,7 +795,8 @@ void echo(int client_sockfd,vector<string> input_vector){
         fp.close();
     }
 }
-void remove_to(int client_sockfd,vector<string> input_vector)
+
+void remove_file(int client_sockfd,vector<string> input_vector)
 {
     string output_string;   
     vector<string> directory;
@@ -839,6 +857,104 @@ void remove_to(int client_sockfd,vector<string> input_vector)
             }
         //cout << input_vector[1].c_str() << " is in " << directory[directory.size()-2] << endl;
     }
+}
+
+
+void remove_directory(int client_sockfd,vector<string> input_vector)
+{
+    string output_string;   
+    vector<string> directory;
+    char path[1024];
+    char *exist;
+    exist = realpath(input_vector[1].c_str(), path);
+    puts(path);
+    if(exist == NULL)
+    {
+        output_string = "File "+input_vector[1]+"is not exist.\n";
+        puts(output_string.c_str());
+        send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);
+    }
+    else
+    {
+        char *linkCopy = strdup(exist);
+        //puts(exist);
+        char * pch;
+        pch = strtok(exist,"/");
+        while (exist != NULL)
+        {
+            printf ("%s\n",exist);
+            directory.push_back(exist);
+            exist = strtok(NULL, "/");
+        }
+            if(directory[directory.size()-2] == ".Trash") {
+                //delete file
+                //exec_command_directly_only(client_sockfd, input_vector); 
+                const char * c = input_vector[1].c_str();            
+                remove_directory_in_Trash(c);
+                //delete .file
+                vector<string> duplicated_input_vector;
+                for(int i=0;i<input_vector.size();i++){
+                    duplicated_input_vector.push_back(input_vector[i]);
+                }
+                duplicated_input_vector[1] = "." + input_vector[1];
+                duplicated_input_vector[0] = "rm";
+                exec_command_directly_only(client_sockfd, duplicated_input_vector);
+            }
+            else{
+                output_string = "[rmdir] only can be used in the trash can to delete all directory.\n";
+                puts(output_string.c_str());
+                send(client_sockfd, output_string.c_str(), (int)strlen(output_string.c_str()), 0);   
+            }
+        //cout << input_vector[1].c_str() << " is in " << directory[directory.size()-2] << endl;
+    }
+}
+
+int remove_directory_in_Trash(const char *path)
+{
+   DIR *d = opendir(path);
+   size_t path_len = strlen(path);
+   int r = -1;
+
+   if (d)
+   {
+      struct dirent *p;
+      r = 0;
+
+      while (!r && (p=readdir(d)))
+      {
+          int r2 = -1;
+          char *buf;
+          size_t len;
+
+          /* Skip the names "." and ".." as we don't want to recurse on them. */
+          if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
+             continue;
+
+          len = path_len + strlen(p->d_name) + 2; 
+          buf = (char *)malloc(len);
+
+          if (buf)
+          {
+             struct stat statbuf;
+             snprintf(buf, len, "%s/%s", path, p->d_name);
+             if (!stat(buf, &statbuf))
+             {
+                if (S_ISDIR(statbuf.st_mode))
+                   r2 = remove_directory_in_Trash(buf);
+                else
+                   r2 = unlink(buf);
+             }
+             free(buf);
+          }
+          r = r2;
+      }
+      closedir(d);
+   }
+
+   if (!r)
+      r = rmdir(path);
+   
+   return r;
 }
 
 
